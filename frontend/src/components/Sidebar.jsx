@@ -15,18 +15,28 @@ import {
 import { UserRole, cn } from '../constants';
 
 export const Sidebar = ({ role, activeTab, setActiveTab, onLogout }) => {
+  // Map backend roles to display names
+  const roleDisplayMap = {
+    'DEAN': 'Dean',
+    'CHAIR': 'Department Chair',
+    'FACULTY': 'Faculty',
+    'SECRETARY': 'Secretary'
+  };
+
+  const displayRole = roleDisplayMap[role] || role || 'Faculty';
+
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.DEAN, UserRole.CHAIR, UserRole.FACULTY, UserRole.SECRETARY] },
-    { id: 'students', label: 'Student Records', icon: FileText, roles: [UserRole.DEAN, UserRole.CHAIR, UserRole.FACULTY, UserRole.SECRETARY] },
-    { id: 'faculty', label: 'Faculty Records', icon: Scale, roles: [UserRole.DEAN, UserRole.CHAIR, UserRole.FACULTY, UserRole.SECRETARY] },
-    { id: 'scheduling', label: 'Scheduling', icon: Clock, roles: [UserRole.DEAN, UserRole.CHAIR, UserRole.FACULTY, UserRole.SECRETARY] },
-    { id: 'research', label: 'College Research', icon: BookOpen, roles: [UserRole.DEAN, UserRole.CHAIR, UserRole.FACULTY, UserRole.SECRETARY] },
-    { id: 'instructions', label: 'Instructions', icon: GraduationCap, roles: [UserRole.DEAN, UserRole.CHAIR, UserRole.FACULTY, UserRole.SECRETARY] },
-    { id: 'reports', label: 'Org. and Events Reports', icon: Calendar, roles: [UserRole.DEAN, UserRole.CHAIR, UserRole.FACULTY, UserRole.SECRETARY] },
-    { id: 'audit', label: 'Audit Logs', icon: MessageSquare, roles: [UserRole.DEAN, UserRole.CHAIR, UserRole.FACULTY, UserRole.SECRETARY], hasSubmenu: true },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
+    { id: 'students', label: 'Student Records', icon: FileText, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
+    { id: 'faculty', label: 'Faculty Records', icon: Scale, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
+    { id: 'scheduling', label: 'Scheduling', icon: Clock, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
+    { id: 'research', label: 'College Research', icon: BookOpen, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
+    { id: 'instructions', label: 'Instructions', icon: GraduationCap, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
+    { id: 'reports', label: 'Org. and Events Reports', icon: Calendar, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
+    { id: 'audit', label: 'Audit Logs', icon: MessageSquare, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'], hasSubmenu: true },
   ];
 
-  const filteredItems = menuItems.filter(item => item.roles.includes(role));
+  const filteredItems = menuItems.filter(item => item.roles.includes(role || 'FACULTY'));
 
   return (
     <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0">
@@ -70,7 +80,7 @@ export const Sidebar = ({ role, activeTab, setActiveTab, onLogout }) => {
             <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-700">
               <Users size={16} />
             </div>
-            <span className="text-sm font-bold text-gray-700">{role}</span>
+            <span className="text-sm font-bold text-gray-700">{displayRole}</span>
           </div>
           <div className="flex flex-col -space-y-1">
             <ChevronRight size={10} className="-rotate-90 text-gray-400" />

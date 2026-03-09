@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, 
   Search, 
@@ -12,9 +12,15 @@ import {
   Award,
   Plus,
   Tag,
-  Clock
+  Clock,
+  X,
+  Save,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { cn } from '../constants';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const researchCategories = [
   'All Categories',
@@ -142,16 +148,119 @@ const getStatusColor = (status) => {
 };
 
 export const CollegeResearch = () => {
+  const [research, setResearch] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedResearch, setSelectedResearch] = useState(null);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [viewMode, setViewMode] = useState('grid');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    authors: '',
+    category: 'Artificial Intelligence',
+    status: 'ongoing',
+    keywords: '',
+    citations: 0,
+    views: 0,
+    downloads: 0,
+    journal: '',
+    doi: '',
+    date: '',
+    year: new Date().getFullYear().toString()
+  });
 
-  const filteredResearch = mockResearch.filter(research => {
-    const matchesSearch = research.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         research.authors.some(author => author.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         research.keywords.some(keyword => keyword.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory = selectedCategory === 'All Categories' || research.category === selectedCategory;
+  useEffect(() => {
+    fetchResearch();
+  }, [selectedCategory]);
+
+  const fetchResearch = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (selectedCategory !== 'All Categories') params.append('category', selectedCategory);
+      
+      const response = await fetch(`${API_URL}/api/research?${params}`);
+      const data = await response.json();
+      if (data.success) {
+        setResearch(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching research:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddResearch = async (e) => {
+    e.preventDefault();
+    try {
+      const dataToSend = {
+        ...formData,
+        authors: formData.authors.split(',').map(a => a.trim()).filter(a => a),
+        keywords: formData.keywords.split(',').map(k => k.trim()).filter(k => k)
+      };
+      
+      const response = await fetch(`${API_URL}/api/research`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToSend)
+      });
+      const data = await response.json();
+      if (data.success) {
+        setShowAddModal(false);
+        setFormData({
+          title: '',
+          description: '',
+          authors: '',
+          category: 'Artificial Intelligence',
+          status: 'ongoing',
+          keywords: '',
+          citations: 0,
+          views: 0,
+          downloads: 0,
+          journal: '',
+          doi: '',
+          date: '',
+          year: new Date().getFullYear().toString()
+        });
+        fetchResearch();
+        alert('Research added successfully!');
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (error) {
+      alert('Error adding research: ' + error.message);
+    }
+  };
+
+  const handleDeleteResearch = async () => {
+    if (!window.confirm('Are you sure you want to delete this research?')) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/research/${selectedResearch.id}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSelectedResearch(null);
+        fetchResearch();
+        alert('Research deleted successfully!');
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (error) {
+      alert('Error deleting research: ' + error.message);
+    }
+  };
+
+  const filteredResearch = research.filter(r => {
+    const matchesSearch = r.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (r.authors || []).some(author => author.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (r.keywords || []).some(keyword => keyword.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory = selectedCategory === 'All Categories' || r.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -188,7 +297,10 @@ export const CollegeResearch = () => {
               List
             </button>
           </div>
-          <button className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors">
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors"
+          >
             <Plus size={18} />
             Add Research
           </button>
@@ -226,7 +338,12 @@ export const CollegeResearch = () => {
       {/* Grid View */}
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredResearch.map((research) => {
+          {loading ? (
+            <div className="col-span-full p-8 text-center text-gray-400">Loading research...</div>
+          ) : filteredResearch.length === 0 ? (
+            <div className="col-span-full p-8 text-center text-gray-400">No research found</div>
+          ) : (
+            filteredResearch.map((research) => {
             const StatusIcon = research.status === 'Published' ? Award : FileText;
             return (
               <div 
@@ -243,7 +360,7 @@ export const CollegeResearch = () => {
                     <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{research.title}</h3>
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
                       <User size={12} />
-                      <span className="line-clamp-1">{research.authors.join(', ')}</span>
+                      <span className="line-clamp-1">{(research.authors || []).join(', ') || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -287,14 +404,19 @@ export const CollegeResearch = () => {
                 </div>
               </div>
             );
-          })}
+          }))}
         </div>
       )}
 
       {/* List View */}
       {viewMode === 'list' && (
         <div className="space-y-4">
-          {filteredResearch.map((research) => {
+          {loading ? (
+            <div className="p-8 text-center text-gray-400">Loading research...</div>
+          ) : filteredResearch.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">No research found</div>
+          ) : (
+            filteredResearch.map((research) => {
             const StatusIcon = research.status === 'Published' ? Award : FileText;
             return (
               <div 
@@ -317,11 +439,11 @@ export const CollegeResearch = () => {
                     <h3 className="text-lg font-bold text-gray-900 mb-2">{research.title}</h3>
                     <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
                       <User size={14} />
-                      <span>{research.authors.join(', ')}</span>
+                      <span>{(research.authors || []).join(', ') || 'N/A'}</span>
                     </div>
                     <p className="text-sm text-gray-600 mb-4 line-clamp-2">{research.abstract}</p>
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {research.keywords.map((keyword, i) => (
+                      {(research.keywords || []).map((keyword, i) => (
                         <span key={i} className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">
                           {keyword}
                         </span>
@@ -348,7 +470,7 @@ export const CollegeResearch = () => {
                 </div>
               </div>
             );
-          })}
+          }))}
         </div>
       )}
 
@@ -373,7 +495,7 @@ export const CollegeResearch = () => {
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">{selectedResearch.title}</h2>
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
                   <User size={16} />
-                  <span>{selectedResearch.authors.join(', ')}</span>
+                  <span>{(selectedResearch.authors || []).join(', ') || 'N/A'}</span>
                 </div>
               </div>
               <button 
@@ -416,7 +538,7 @@ export const CollegeResearch = () => {
               <div>
                 <h3 className="text-sm font-bold text-gray-900 mb-3">Keywords</h3>
                 <div className="flex flex-wrap gap-2">
-                  {selectedResearch.keywords.map((keyword, i) => (
+                  {(selectedResearch.keywords || []).map((keyword, i) => (
                     <span key={i} className="text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
                       {keyword}
                     </span>
@@ -443,15 +565,150 @@ export const CollegeResearch = () => {
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-gray-100">
-                <button className="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
-                  <Download size={16} />
-                  Download PDF
+                <button 
+                  onClick={handleDeleteResearch}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 size={16} />
+                  Delete Research
                 </button>
                 <button className="px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl text-sm font-bold transition-colors">
                   View Full Text
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Research Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Add New Research</h2>
+              <button type="button" onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleAddResearch} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                <input
+                  type="text"
+                  required
+                  autoComplete="off"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({...prev, title: e.target.value}))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  autoComplete="off"
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Authors (comma-separated)</label>
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                    value={formData.authors}
+                    onChange={(e) => setFormData(prev => ({...prev, authors: e.target.value}))}
+                    placeholder="Dr. John Smith, Prof. Maria Garcia"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                    value={formData.category}
+                    onChange={(e) => setFormData(prev => ({...prev, category: e.target.value}))}
+                  >
+                    {researchCategories.filter(c => c !== 'All Categories').map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                    value={formData.status}
+                    onChange={(e) => setFormData(prev => ({...prev, status: e.target.value}))}
+                  >
+                    <option value="ongoing">Ongoing</option>
+                    <option value="Published">Published</option>
+                    <option value="Under Review">Under Review</option>
+                    <option value="Draft">Draft</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                    value={formData.year}
+                    onChange={(e) => setFormData(prev => ({...prev, year: e.target.value}))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Journal</label>
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                    value={formData.journal}
+                    onChange={(e) => setFormData(prev => ({...prev, journal: e.target.value}))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">DOI</label>
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                    value={formData.doi}
+                    onChange={(e) => setFormData(prev => ({...prev, doi: e.target.value}))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Keywords (comma-separated)</label>
+                <input
+                  type="text"
+                  autoComplete="off"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                  value={formData.keywords}
+                  onChange={(e) => setFormData(prev => ({...prev, keywords: e.target.value}))}
+                  placeholder="Machine Learning, Education, Analytics"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Save size={18} />
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

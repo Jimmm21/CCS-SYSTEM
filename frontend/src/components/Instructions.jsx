@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   BookOpen, 
   GraduationCap, 
@@ -19,211 +19,111 @@ import {
   Trash2
 } from 'lucide-react';
 import { cn } from '../constants';
+import InstructionsForm from './InstructionsForm';
 
-const mockSyllabi = [
-  {
-    id: '1',
-    course: 'BSIT',
-    subject: 'Web Development',
-    code: 'IT 301',
-    instructor: 'Prof. John Smith',
-    semester: '1st Semester',
-    academicYear: '2024-2025',
-    units: 3,
-    hours: 54,
-    description: 'Introduction to modern web development technologies including HTML5, CSS3, JavaScript, and frameworks.',
-    objectives: [
-      'Understand fundamental web technologies',
-      'Build responsive web applications',
-      'Implement modern JavaScript frameworks',
-      'Deploy web applications'
-    ],
-    topics: [
-      { week: 1, topic: 'Introduction to Web Development', hours: 3 },
-      { week: 2, topic: 'HTML5 and Semantic Markup', hours: 3 },
-      { week: 3, topic: 'CSS3 and Styling', hours: 3 },
-      { week: 4, topic: 'JavaScript Fundamentals', hours: 6 },
-      { week: 5, topic: 'DOM Manipulation', hours: 3 },
-      { week: 6, topic: 'Responsive Design', hours: 6 },
-      { week: 7, topic: 'JavaScript Frameworks (React)', hours: 9 },
-      { week: 8, topic: 'State Management', hours: 6 },
-      { week: 9, topic: 'API Integration', hours: 6 },
-      { week: 10, topic: 'Deployment and Hosting', hours: 6 },
-      { week: 11, topic: 'Project Development', hours: 6 },
-      { week: 12, topic: 'Final Project Presentation', hours: 3 }
-    ],
-    requirements: [
-      { type: 'Quizzes', weight: 20 },
-      { type: 'Assignments', weight: 30 },
-      { type: 'Project', weight: 40 },
-      { type: 'Participation', weight: 10 }
-    ],
-    status: 'Active'
-  },
-  {
-    id: '2',
-    course: 'BSCS',
-    subject: 'Data Structures and Algorithms',
-    code: 'CS 201',
-    instructor: 'Prof. Maria Garcia',
-    semester: '1st Semester',
-    academicYear: '2024-2025',
-    units: 3,
-    hours: 54,
-    description: 'Comprehensive study of data structures and algorithms including arrays, linked lists, trees, graphs, and sorting algorithms.',
-    objectives: [
-      'Master fundamental data structures',
-      'Understand algorithm complexity',
-      'Implement efficient algorithms',
-      'Solve complex programming problems'
-    ],
-    topics: [
-      { week: 1, topic: 'Introduction to Data Structures', hours: 3 },
-      { week: 2, topic: 'Arrays and Linked Lists', hours: 6 },
-      { week: 3, topic: 'Stacks and Queues', hours: 6 },
-      { week: 4, topic: 'Trees and Binary Trees', hours: 9 },
-      { week: 5, topic: 'Binary Search Trees', hours: 6 },
-      { week: 6, topic: 'Heaps and Priority Queues', hours: 6 },
-      { week: 7, topic: 'Graphs and Graph Algorithms', hours: 9 },
-      { week: 8, topic: 'Sorting Algorithms', hours: 6 },
-      { week: 9, topic: 'Searching Algorithms', hours: 3 },
-      { week: 10, topic: 'Hash Tables', hours: 6 }
-    ],
-    requirements: [
-      { type: 'Exams', weight: 40 },
-      { type: 'Laboratory Exercises', weight: 30 },
-      { type: 'Projects', weight: 25 },
-      { type: 'Participation', weight: 5 }
-    ],
-    status: 'Active'
-  },
-];
-
-const mockCurricula = [
-  {
-    id: '1',
-    course: 'BSIT',
-    program: 'Bachelor of Science in Information Technology',
-    year: '2024',
-    totalUnits: 180,
-    semesters: [
-      {
-        semester: '1st Year - 1st Semester',
-        subjects: [
-          { code: 'IT 101', name: 'Introduction to IT', units: 3 },
-          { code: 'CS 101', name: 'Programming Fundamentals', units: 3 },
-          { code: 'MATH 101', name: 'Discrete Mathematics', units: 3 },
-          { code: 'ENG 101', name: 'Communication Skills', units: 3 },
-          { code: 'PE 101', name: 'Physical Education', units: 2 }
-        ]
-      },
-      {
-        semester: '1st Year - 2nd Semester',
-        subjects: [
-          { code: 'IT 102', name: 'Web Development', units: 3 },
-          { code: 'CS 102', name: 'Object-Oriented Programming', units: 3 },
-          { code: 'MATH 102', name: 'Calculus', units: 3 },
-          { code: 'ENG 102', name: 'Technical Writing', units: 3 },
-          { code: 'PE 102', name: 'Physical Education', units: 2 }
-        ]
-      }
-    ],
-    status: 'Active'
-  },
-  {
-    id: '2',
-    course: 'BSCS',
-    program: 'Bachelor of Science in Computer Science',
-    year: '2024',
-    totalUnits: 180,
-    semesters: [
-      {
-        semester: '1st Year - 1st Semester',
-        subjects: [
-          { code: 'CS 101', name: 'Introduction to Computer Science', units: 3 },
-          { code: 'CS 102', name: 'Programming Fundamentals', units: 3 },
-          { code: 'MATH 101', name: 'Discrete Mathematics', units: 3 },
-          { code: 'MATH 103', name: 'Linear Algebra', units: 3 },
-          { code: 'ENG 101', name: 'Communication Skills', units: 3 }
-        ]
-      }
-    ],
-    status: 'Active'
-  },
-];
-
-const mockLessons = [
-  {
-    id: '1',
-    syllabusId: '1',
-    title: 'Introduction to Web Development',
-    week: 1,
-    duration: '3 hours',
-    type: 'Lecture',
-    materials: [
-      { name: 'Introduction to Web Development.pdf', type: 'PDF', size: '2.5 MB' },
-      { name: 'Web Development Basics.pptx', type: 'PPT', size: '5.2 MB' }
-    ],
-    activities: [
-      { name: 'Quiz 1: Web Fundamentals', dueDate: '2024-09-15', status: 'Completed' },
-      { name: 'Assignment 1: HTML Basics', dueDate: '2024-09-20', status: 'Pending' }
-    ],
-    objectives: [
-      'Understand the history of web development',
-      'Identify key web technologies',
-      'Set up development environment'
-    ],
-    status: 'Published'
-  },
-  {
-    id: '2',
-    syllabusId: '1',
-    title: 'HTML5 and Semantic Markup',
-    week: 2,
-    duration: '3 hours',
-    type: 'Lecture',
-    materials: [
-      { name: 'HTML5 Guide.pdf', type: 'PDF', size: '3.1 MB' },
-      { name: 'Semantic HTML Examples.zip', type: 'ZIP', size: '1.8 MB' }
-    ],
-    activities: [
-      { name: 'Lab Exercise: HTML Structure', dueDate: '2024-09-27', status: 'Pending' }
-    ],
-    objectives: [
-      'Master HTML5 semantic elements',
-      'Create well-structured HTML documents',
-      'Understand accessibility principles'
-    ],
-    status: 'Published'
-  },
-];
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const Instructions = () => {
-  const [activeTab, setActiveTab] = useState('syllabus'); // 'syllabus', 'curriculum', 'lessons'
+  const [syllabi, setSyllabi] = useState([]);
+  const [curricula, setCurricula] = useState([]);
+  const [lessons, setLessons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('syllabus');
   const [selectedSyllabus, setSelectedSyllabus] = useState(null);
   const [selectedCurriculum, setSelectedCurriculum] = useState(null);
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('All Courses');
   const [expandedWeeks, setExpandedWeeks] = useState({});
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [formData, setFormData] = useState({
+    // Syllabus fields
+    course: '',
+    subject: '',
+    code: '',
+    instructor: '',
+    semester: '',
+    academic_year: '',
+    units: 0,
+    hours: 0,
+    description: '',
+    // Curriculum fields
+    program: '',
+    year: '',
+    total_units: 0,
+    semesters: [], // Array of {semester: string, subjects: [{code, name, units}]}
+    // Lesson fields
+    syllabus_id: '',
+    title: '',
+    week: 1,
+    duration: '',
+    type: 'Lecture'
+  });
 
-  const filteredSyllabi = mockSyllabi.filter(syllabus => {
-    const matchesSearch = syllabus.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         syllabus.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         syllabus.instructor.toLowerCase().includes(searchTerm.toLowerCase());
+  useEffect(() => {
+    fetchData();
+  }, [activeTab, selectedCourse]);
+
+  useEffect(() => {
+    // Fetch syllabi when switching to lessons tab (needed for dropdown)
+    if (activeTab === 'lessons') {
+      fetch(`${API_URL}/api/syllabus`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setSyllabi(data.data);
+          }
+        })
+        .catch(err => console.error('Error fetching syllabi:', err));
+    }
+  }, [activeTab]);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      if (activeTab === 'syllabus') {
+        const response = await fetch(`${API_URL}/api/syllabus`);
+        const data = await response.json();
+        if (data.success) {
+          setSyllabi(data.data);
+        }
+      } else if (activeTab === 'curriculum') {
+        const response = await fetch(`${API_URL}/api/curriculum`);
+        const data = await response.json();
+        if (data.success) {
+          setCurricula(data.data);
+        }
+      } else if (activeTab === 'lessons') {
+        const response = await fetch(`${API_URL}/api/lessons`);
+        const data = await response.json();
+        if (data.success) {
+          setLessons(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab]);
+
+  const filteredSyllabi = syllabi.filter(syllabus => {
+    const matchesSearch = syllabus.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         syllabus.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         syllabus.instructor?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCourse = selectedCourse === 'All Courses' || syllabus.course === selectedCourse;
     return matchesSearch && matchesCourse;
   });
 
-  const filteredCurricula = mockCurricula.filter(curriculum => {
-    const matchesSearch = curriculum.program.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         curriculum.course.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredCurricula = curricula.filter(curriculum => {
+    const matchesSearch = curriculum.program?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         curriculum.course?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCourse = selectedCourse === 'All Courses' || curriculum.course === selectedCourse;
     return matchesSearch && matchesCourse;
   });
 
-  const filteredLessons = mockLessons.filter(lesson => {
-    const matchesSearch = lesson.title.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredLessons = lessons.filter(lesson => {
+    const matchesSearch = lesson.title?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
@@ -234,6 +134,84 @@ export const Instructions = () => {
     }));
   };
 
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    try {
+      let url = '';
+      let payload = {};
+
+      if (activeTab === 'syllabus') {
+        url = `${API_URL}/api/syllabus`;
+        payload = {
+          course: formData.course,
+          subject: formData.subject,
+          code: formData.code,
+          instructor: formData.instructor,
+          semester: formData.semester,
+          academic_year: formData.academic_year,
+          units: formData.units,
+          hours: formData.hours,
+          description: formData.description
+        };
+      } else if (activeTab === 'curriculum') {
+        url = `${API_URL}/api/curriculum`;
+        payload = {
+          course: formData.course,
+          program: formData.program,
+          year: formData.year,
+          total_units: formData.total_units,
+          semesters: formData.semesters || [] // Use semesters from form data
+        };
+      } else if (activeTab === 'lessons') {
+        url = `${API_URL}/api/lessons`;
+        payload = {
+          syllabus_id: parseInt(formData.syllabus_id),
+          title: formData.title,
+          week: formData.week,
+          duration: formData.duration,
+          type: formData.type
+        };
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setShowAddModal(false);
+        setFormData({
+          course: '',
+          subject: '',
+          code: '',
+          instructor: '',
+          semester: '',
+          academic_year: '',
+          units: 0,
+          hours: 0,
+          description: '',
+          program: '',
+          year: '',
+          total_units: 0,
+          semesters: [], // Reset to empty array
+          syllabus_id: '',
+          title: '',
+          week: 1,
+          duration: '',
+          type: 'Lecture'
+        });
+        await fetchData();
+        alert(`${activeTab === 'syllabus' ? 'Syllabus' : activeTab === 'curriculum' ? 'Curriculum' : 'Lesson'} added successfully!`);
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (error) {
+      alert('Error adding item: ' + error.message);
+    }
+  }, [activeTab, formData, fetchData]);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
@@ -242,7 +220,10 @@ export const Instructions = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Instructions</h2>
           <p className="text-sm text-gray-500">Syllabus, Curriculum, and Lessons management</p>
         </div>
-        <button className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors">
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors"
+        >
           <Plus size={18} />
           Add New
         </button>
@@ -324,7 +305,16 @@ export const Instructions = () => {
       {/* Syllabus Tab */}
       {activeTab === 'syllabus' && (
         <div className="space-y-4">
-          {filteredSyllabi.map((syllabus) => (
+          {loading ? (
+            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
+              Loading syllabi...
+            </div>
+          ) : filteredSyllabi.length === 0 ? (
+            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
+              No syllabi found. Click "Add New" to create one.
+            </div>
+          ) : (
+            filteredSyllabi.map((syllabus) => (
             <div 
               key={syllabus.id}
               className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
@@ -376,14 +366,24 @@ export const Instructions = () => {
                 </div>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
       )}
 
       {/* Curriculum Tab */}
       {activeTab === 'curriculum' && (
         <div className="space-y-4">
-          {filteredCurricula.map((curriculum) => (
+          {loading ? (
+            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
+              Loading curricula...
+            </div>
+          ) : filteredCurricula.length === 0 ? (
+            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
+              No curricula found. Click "Add New" to create one.
+            </div>
+          ) : (
+            filteredCurricula.map((curriculum) => (
             <div 
               key={curriculum.id}
               className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all"
@@ -422,14 +422,24 @@ export const Instructions = () => {
                 ))}
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
       )}
 
       {/* Lessons Tab */}
       {activeTab === 'lessons' && (
         <div className="space-y-4">
-          {filteredLessons.map((lesson) => (
+          {loading ? (
+            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
+              Loading lessons...
+            </div>
+          ) : filteredLessons.length === 0 ? (
+            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
+              No lessons found. Click "Add New" to create one.
+            </div>
+          ) : (
+            filteredLessons.map((lesson) => (
             <div 
               key={lesson.id}
               className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
@@ -475,7 +485,8 @@ export const Instructions = () => {
                 </div>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
       )}
 
@@ -710,6 +721,18 @@ export const Instructions = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <InstructionsForm
+          activeTab={activeTab}
+          formData={formData}
+          setFormData={setFormData}
+          syllabi={syllabi}
+          onSubmit={handleSubmit}
+          onClose={() => setShowAddModal(false)}
+        />
       )}
     </div>
   );

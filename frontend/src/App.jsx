@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Login } from './components/Login';
+import { Register } from './components/Register';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { StudentRecords } from './components/StudentRecords';
@@ -8,15 +9,45 @@ import { Scheduling } from './components/Scheduling';
 import { CollegeResearch } from './components/CollegeResearch';
 import { Instructions } from './components/Instructions';
 import { OrgEventsReports } from './components/OrgEventsReports';
+import { AuditLogs } from './components/AuditLogs';
 import { Bell, Search } from 'lucide-react';
 import { UserRole } from './constants';
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // Load user from localStorage on mount
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('activeTab') || 'dashboard';
+  });
+  const [showRegister, setShowRegister] = useState(false);
+
+  // Save user to localStorage whenever it changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
+    }
+  }, [user]);
+
+  // Save activeTab to localStorage
+  useEffect(() => {
+    localStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
 
   if (!user) {
-    return <Login onLogin={(role) => setUser({ role })} />;
+    if (showRegister) {
+      return (
+        <Register 
+          onRegisterSuccess={() => setShowRegister(false)}
+          onSwitchToLogin={() => setShowRegister(false)}
+        />
+      );
+    }
+    return <Login onLogin={(userData) => setUser(userData)} onSwitchToRegister={() => setShowRegister(true)} />;
   }
 
   const renderContent = () => {
@@ -35,6 +66,8 @@ export default function App() {
         return <Instructions />;
       case 'reports':
         return <OrgEventsReports />;
+      case 'audit':
+        return <AuditLogs />;
       default:
         return (
           <div className="flex items-center justify-center h-full text-gray-400">
@@ -50,10 +83,14 @@ export default function App() {
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-gray-900">
       <Sidebar 
-        role={user.role} 
+        role={user.role || 'FACULTY'} 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
-        onLogout={() => setUser(null)}
+        onLogout={() => {
+          setUser(null);
+          localStorage.removeItem('user');
+          localStorage.removeItem('activeTab');
+        }}
       />
       
       <main className="flex-1 flex flex-col overflow-hidden">

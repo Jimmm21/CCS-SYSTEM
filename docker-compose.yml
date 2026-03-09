@@ -1,12 +1,51 @@
 services:
-  app:
+  frontend:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
       args:
         - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     ports:
       - "3000:80"
-    container_name: itew6-project
+    container_name: itew6-frontend
     restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:5000
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    container_name: itew6-backend
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=development
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=itew6_user
+      - MYSQL_PASSWORD=itew6_password
+      - MYSQL_DATABASE=itew6_db
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8.0
+    container_name: itew6-mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=itew6_db
+      - MYSQL_USER=itew6_user
+      - MYSQL_PASSWORD=itew6_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+
+volumes:
+  mysql_data:
 
