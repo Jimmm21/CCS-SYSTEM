@@ -4,26 +4,45 @@ import {
   GraduationCap, 
   FileText, 
   Search, 
-  Filter,
-  Download,
-  Eye,
-  Calendar,
   User,
   Clock,
   Plus,
-  ChevronDown,
-  ChevronRight,
   CheckCircle2,
   XCircle,
-  Edit,
-  Trash2
 } from 'lucide-react';
 import { cn } from '../constants';
 import InstructionsForm from './InstructionsForm';
+import { useUI } from './ui/UIProvider';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export const Instructions = () => {
+export const Instructions = ({ navigationIntent, clearNavigationIntent }) => {
+  const { showError, showSuccess } = useUI();
+  const initialFormState = {
+    course: '',
+    subject: '',
+    code: '',
+    instructor: '',
+    semester: '',
+    academic_year: '',
+    units: 0,
+    hours: 0,
+    description: '',
+    objectives: [],
+    topics: [],
+    requirements: [],
+    program: '',
+    year: '',
+    total_units: 0,
+    semesters: [],
+    syllabus_id: '',
+    title: '',
+    week: 1,
+    duration: '',
+    type: 'Lecture',
+    materials: [],
+    activities: []
+  };
   const [syllabi, setSyllabi] = useState([]);
   const [curricula, setCurricula] = useState([]);
   const [lessons, setLessons] = useState([]);
@@ -34,35 +53,20 @@ export const Instructions = () => {
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('All Courses');
-  const [expandedWeeks, setExpandedWeeks] = useState({});
   const [showAddModal, setShowAddModal] = useState(false);
-  const [formData, setFormData] = useState({
-    // Syllabus fields
-    course: '',
-    subject: '',
-    code: '',
-    instructor: '',
-    semester: '',
-    academic_year: '',
-    units: 0,
-    hours: 0,
-    description: '',
-    // Curriculum fields
-    program: '',
-    year: '',
-    total_units: 0,
-    semesters: [], // Array of {semester: string, subjects: [{code, name, units}]}
-    // Lesson fields
-    syllabus_id: '',
-    title: '',
-    week: 1,
-    duration: '',
-    type: 'Lecture'
-  });
+  const [formData, setFormData] = useState(initialFormState);
 
   useEffect(() => {
     fetchData();
   }, [activeTab, selectedCourse]);
+
+  useEffect(() => {
+    setSelectedSyllabus(null);
+    setSelectedCurriculum(null);
+    setSelectedLesson(null);
+    setShowAddModal(false);
+    setFormData(initialFormState);
+  }, [activeTab]);
 
   useEffect(() => {
     // Fetch syllabi when switching to lessons tab (needed for dropdown)
@@ -77,6 +81,30 @@ export const Instructions = () => {
         .catch(err => console.error('Error fetching syllabi:', err));
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (navigationIntent?.tab !== 'instructions') {
+      return;
+    }
+
+    const context = navigationIntent.context || {};
+    if (context.type) {
+      setActiveTab(context.type);
+    }
+    if (Object.prototype.hasOwnProperty.call(context, 'course')) {
+      setSelectedCourse(context.course || 'All Courses');
+    }
+    if (context.syllabusId) {
+      if (syllabi.length === 0) {
+        return;
+      }
+      const syllabusRecord = syllabi.find((item) => item.id === context.syllabusId);
+      if (syllabusRecord) {
+        setSelectedSyllabus(syllabusRecord);
+      }
+    }
+    clearNavigationIntent?.();
+  }, [navigationIntent, clearNavigationIntent, syllabi]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -127,13 +155,6 @@ export const Instructions = () => {
     return matchesSearch;
   });
 
-  const toggleWeek = (week) => {
-    setExpandedWeeks(prev => ({
-      ...prev,
-      [week]: !prev[week]
-    }));
-  };
-
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     try {
@@ -151,7 +172,10 @@ export const Instructions = () => {
           academic_year: formData.academic_year,
           units: formData.units,
           hours: formData.hours,
-          description: formData.description
+          description: formData.description,
+          objectives: formData.objectives || [],
+          topics: formData.topics || [],
+          requirements: formData.requirements || []
         };
       } else if (activeTab === 'curriculum') {
         url = `${API_URL}/api/curriculum`;
@@ -169,7 +193,10 @@ export const Instructions = () => {
           title: formData.title,
           week: formData.week,
           duration: formData.duration,
-          type: formData.type
+          type: formData.type,
+          materials: formData.materials || [],
+          activities: formData.activities || [],
+          objectives: formData.objectives || []
         };
       }
 
@@ -182,35 +209,19 @@ export const Instructions = () => {
       const data = await response.json();
       if (data.success) {
         setShowAddModal(false);
-        setFormData({
-          course: '',
-          subject: '',
-          code: '',
-          instructor: '',
-          semester: '',
-          academic_year: '',
-          units: 0,
-          hours: 0,
-          description: '',
-          program: '',
-          year: '',
-          total_units: 0,
-          semesters: [], // Reset to empty array
-          syllabus_id: '',
-          title: '',
-          week: 1,
-          duration: '',
-          type: 'Lecture'
-        });
+        setFormData(initialFormState);
         await fetchData();
-        alert(`${activeTab === 'syllabus' ? 'Syllabus' : activeTab === 'curriculum' ? 'Curriculum' : 'Lesson'} added successfully!`);
+        showSuccess(
+          `${activeTab === 'syllabus' ? 'Syllabus' : activeTab === 'curriculum' ? 'Curriculum' : 'Lesson'} added`,
+          'The instruction record was saved successfully.',
+        );
       } else {
-        alert('Error: ' + data.message);
+        showError('Unable to add record', data.message);
       }
     } catch (error) {
-      alert('Error adding item: ' + error.message);
+      showError('Unable to add record', error.message);
     }
-  }, [activeTab, formData, fetchData]);
+  }, [activeTab, formData, fetchData, showError, showSuccess]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -221,7 +232,10 @@ export const Instructions = () => {
           <p className="text-sm text-gray-500">Syllabus, Curriculum, and Lessons management</p>
         </div>
         <button 
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            setFormData(initialFormState);
+            setShowAddModal(true);
+          }}
           className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors"
         >
           <Plus size={18} />
@@ -346,24 +360,6 @@ export const Instructions = () => {
                   </div>
                   <p className="text-sm text-gray-600 line-clamp-2">{syllabus.description}</p>
                 </div>
-                <div className="flex items-center gap-2 ml-4">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-400"
-                  >
-                    <Edit size={16} />
-                  </button>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                    className="p-2 hover:bg-red-50 rounded-lg text-red-400"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
               </div>
             </div>
             ))
@@ -473,16 +469,6 @@ export const Instructions = () => {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 ml-4">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-400"
-                  >
-                    <Edit size={16} />
-                  </button>
-                </div>
               </div>
             </div>
             ))
@@ -574,15 +560,6 @@ export const Instructions = () => {
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-gray-100">
-                <button className="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
-                  <Download size={16} />
-                  Download PDF
-                </button>
-                <button className="px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl text-sm font-bold transition-colors">
-                  Edit Syllabus
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -689,9 +666,6 @@ export const Instructions = () => {
                           <p className="text-xs text-gray-500">{material.type} • {material.size}</p>
                         </div>
                       </div>
-                      <button className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-bold transition-colors">
-                        Download
-                      </button>
                     </div>
                   ))}
                 </div>
@@ -731,7 +705,10 @@ export const Instructions = () => {
           setFormData={setFormData}
           syllabi={syllabi}
           onSubmit={handleSubmit}
-          onClose={() => setShowAddModal(false)}
+          onClose={() => {
+            setShowAddModal(false);
+            setFormData(initialFormState);
+          }}
         />
       )}
     </div>
