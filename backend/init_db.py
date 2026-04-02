@@ -11,7 +11,11 @@ def init_database():
             seed_demo_data()
             db.session.commit()
             print("Database tables created successfully.")
-            print("Demo account: admin@example.com / admin123")
+            print("Demo accounts (password: admin123):")
+            print("- admin@example.com (DEAN)")
+            print("- chair@example.com (CHAIR)")
+            print("- faculty@example.com (FACULTY)")
+            print("- secretary@example.com (SECRETARY)")
             print("Demo records seeded for students, faculty, schedules, events, research, and instructions.")
         except Exception as exc:
             db.session.rollback()

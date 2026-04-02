@@ -11,6 +11,7 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 from audit import log_audit_event
+from authz import require_roles
 from models import (
     Student,
     StudentAcademicHistory,
@@ -201,6 +202,7 @@ def update_student(student_id):
 
 
 @students_bp.route('/<int:student_id>', methods=['DELETE'])
+@require_roles(['DEAN'])
 def delete_student(student_id):
     """Delete a student."""
     student = Student.query.get_or_404(student_id)
