@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Save } from 'lucide-react';
-import { CORE_COURSES, ENROLLMENT_STATUSES, YEAR_LEVELS } from '../lib/formOptions';
+import { CORE_COURSES, ENROLLMENT_STATUSES, YEAR_LEVELS } from '../../lib/formOptions';
 
 export const StudentForm = React.memo(({ onSubmit, onCancel, title, formData, setFormData }) => {
   const handleChange = React.useCallback((field, value) => {

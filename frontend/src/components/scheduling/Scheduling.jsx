@@ -11,10 +11,10 @@ import {
   Trash2,
   X
 } from 'lucide-react';
-import { cn } from '../constants';
+import { cn } from '../../constants';
 import { ScheduleForm } from './ScheduleForm';
-import { useUI } from './ui/UIProvider';
-import { apiRequest } from '../lib/api';
+import { useUI } from '../ui/UIProvider';
+import { apiRequest } from '../../lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 

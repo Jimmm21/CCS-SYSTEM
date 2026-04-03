@@ -13,7 +13,7 @@ import {
   FileText,
   X
 } from 'lucide-react';
-import { cn } from '../constants';
+import { cn } from '../../constants';
 
 export const Sidebar = ({ role, activeTab, setActiveTab, onLogout, open = true, onClose }) => {
   // Map backend roles to display names

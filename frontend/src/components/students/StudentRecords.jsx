@@ -13,9 +13,9 @@ import {
   Users,
 } from 'lucide-react';
 import { StudentForm } from './StudentForm';
-import { ModalShell } from './ui/ModalShell';
-import { useUI } from './ui/UIProvider';
-import { apiRequest } from '../lib/api';
+import { ModalShell } from '../ui/ModalShell';
+import { useUI } from '../ui/UIProvider';
+import { apiRequest } from '../../lib/api';
 import {
   ACTIVITY_TYPES,
   AFFILIATION_CATEGORIES,
@@ -23,9 +23,9 @@ import {
   CORE_COURSES,
   VIOLATION_SEVERITIES,
   YEAR_LEVELS,
-} from '../lib/formOptions';
-import { cn } from '../constants';
-import { getInitials, parseOptionalJson } from '../lib/display';
+} from '../../lib/formOptions';
+import { cn } from '../../constants';
+import { getInitials, parseOptionalJson } from '../../lib/display';
 
 const defaultStudentForm = {
   student_id: '',

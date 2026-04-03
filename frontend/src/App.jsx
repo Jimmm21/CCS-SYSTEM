@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Login } from './components/Login';
-import { Register } from './components/Register';
-import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './components/Dashboard';
-import { StudentRecords } from './components/StudentRecords';
-import { FacultyRecords } from './components/FacultyRecords';
-import { Scheduling } from './components/Scheduling';
-import { CollegeResearch } from './components/CollegeResearch';
-import { Instructions } from './components/Instructions';
-import { OrgEventsReports } from './components/OrgEventsReports';
-import { AuditLogs } from './components/AuditLogs';
+import { Login } from './components/auth/Login';
+import { Register } from './components/auth/Register';
+import { Sidebar } from './components/layout/Sidebar';
+import { Dashboard } from './components/dashboard/Dashboard';
+import { StudentRecords } from './components/students/StudentRecords';
+import { FacultyRecords } from './components/faculty/FacultyRecords';
+import { Scheduling } from './components/scheduling/Scheduling';
+import { CollegeResearch } from './components/research/CollegeResearch';
+import { Instructions } from './components/instructions/Instructions';
+import { OrgEventsReports } from './components/events/OrgEventsReports';
+import { AuditLogs } from './components/audit/AuditLogs';
 import { Menu, ShieldCheck } from 'lucide-react';
 import { apiRequest } from './lib/api';
 import { UIProvider, useUI } from './components/ui/UIProvider';
-import { AccountSettingsModal } from './components/AccountSettingsModal';
+import { AccountSettingsModal } from './components/account/AccountSettingsModal';
 
 function AppShell() {
   const pageTitles = {
