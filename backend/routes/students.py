@@ -3,7 +3,6 @@ import os
 import sys
 
 from flask import Blueprint, jsonify, request
-from sqlalchemy import or_
 
 # Add parent directory to path for imports
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -20,6 +19,7 @@ from models import (
     StudentSkill,
     StudentViolation,
     db,
+    or_,
 )
 
 students_bp = Blueprint('students', __name__, url_prefix='/api/students')
