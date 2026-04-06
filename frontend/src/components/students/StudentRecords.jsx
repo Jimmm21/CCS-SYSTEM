@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Download,
   Edit3,
-  Eye,
   FileImage,
   FileSpreadsheet,
   FileText,
@@ -10,7 +10,6 @@ import {
   Mail,
   Phone,
   Plus,
-  Search,
   ShieldAlert,
   Sparkles,
   Trash2,
@@ -18,6 +17,8 @@ import {
   Users,
 } from 'lucide-react';
 import { StudentForm } from './StudentForm';
+import { StudentListRow } from './StudentListRow';
+import { StudentSearchBar } from './StudentSearchBar';
 import { ModalShell } from '../ui/ModalShell';
 import { useUI } from '../ui/UIProvider';
 import { apiRequest } from '../../lib/api';
@@ -586,6 +587,8 @@ function ItemActionButtons({ onEdit, onDelete }) {
 }
 
 export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavigate }) {
+  const navigate = useNavigate();
+  const { id: routeStudentId } = useParams();
   const { showError, showSuccess, showInfo, confirm } = useUI();
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -726,11 +729,24 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
     if (Object.prototype.hasOwnProperty.call(context, 'affiliation')) setAffiliationQuery(context.affiliation || '');
 
     if (context.studentId) {
-      fetchStudentDetails(context.studentId);
+      navigate('/users/' + context.studentId);
     }
 
     clearNavigationIntent?.();
-  }, [navigationIntent, clearNavigationIntent, fetchStudentDetails]);
+  }, [navigationIntent, clearNavigationIntent, navigate]);
+
+  useEffect(() => {
+    if (!routeStudentId) {
+      setSelectedStudent(null);
+      return;
+    }
+
+    if (String(selectedStudent?.id) === String(routeStudentId)) {
+      return;
+    }
+
+    fetchStudentDetails(routeStudentId);
+  }, [fetchStudentDetails, routeStudentId, selectedStudent?.id]);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -1145,6 +1161,7 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
 
   const handleSelectStudent = async (studentId) => {
     await fetchStudentDetails(studentId);
+    navigate('/users/' + studentId);
   };
 
   const openAddStudentModal = () => {
@@ -1178,6 +1195,7 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
       setFormData(defaultStudentForm);
       await refreshCurrentView();
       await fetchStudentDetails(response.data.id);
+      navigate('/users/' + response.data.id);
       showSuccess('Student profile added', 'The new student is now part of the searchable list.');
     } catch (error) {
       showError('Unable to add student', error.message);
@@ -1901,16 +1919,7 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
         </div>
 
         <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <label className="relative block xl:col-span-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search name, student ID, or email..."
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none transition focus:border-orange-200 focus:bg-white focus:ring-2 focus:ring-orange-200"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-            />
-          </label>
+          <StudentSearchBar value={searchTerm} onChange={setSearchTerm} />
 
           <select
             className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-orange-200 focus:bg-white focus:ring-2 focus:ring-orange-200"
@@ -2043,64 +2052,15 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {students.map((student) => (
-                  <tr key={student.id} className="transition-colors hover:bg-orange-50/40">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 via-amber-50 to-orange-50 text-sm font-bold text-orange-700">
-                          {getInitials(student.first_name, student.last_name)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">
-                            {student.last_name}, {student.first_name} {student.middle_name ? `${student.middle_name[0]}.` : ''}
-                          </p>
-                          <p className="text-xs text-slate-500">{student.email || 'No email on file'}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-600">{student.student_id}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{student.course}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{student.year_level}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        {(student.skills || []).slice(0, 2).map((skill) => (
-                          <span key={skill.id} className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
-                            {skill.skill_name}
-                          </span>
-                        ))}
-                        {(student.affiliations || []).slice(0, 1).map((affiliation) => (
-                          <span key={affiliation.id} className="rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-bold text-sky-700">
-                            {affiliation.name}
-                          </span>
-                        ))}
-                        {(student.skills || []).length === 0 && (student.affiliations || []).length === 0 ? (
-                          <span className="text-xs text-slate-400">No enrichment data yet</span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleSelectStudent(student.id)}
-                          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
-                        >
-                          <Eye size={14} />
-                          View
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedStudent(student);
-                            openEditStudentModal(student);
-                          }}
-                          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50"
-                        >
-                          <Edit3 size={14} />
-                          Edit
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                  <StudentListRow
+                    key={student.id}
+                    student={student}
+                    onView={handleSelectStudent}
+                    onEdit={(nextStudent) => {
+                      setSelectedStudent(nextStudent);
+                      openEditStudentModal(nextStudent);
+                    }}
+                  />
                 ))}
               </tbody>
             </table>
@@ -2110,7 +2070,10 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
 
       {selectedStudent && !showEditModal ? (
         <ModalShell
-          onClose={() => setSelectedStudent(null)}
+          onClose={() => {
+            setSelectedStudent(null);
+            navigate('/users');
+          }}
           title="Student Profile"
           description="Comprehensive student information with linked schedules, instructions, activities, and event participation."
           size="max-w-7xl"
@@ -2202,7 +2165,7 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <p className="text-sm font-bold text-slate-900">
-                                  {record.course || selectedStudent.course} • {record.academic_year || 'Academic year not set'}
+                                  {record.course || selectedStudent.course} â€¢ {record.academic_year || 'Academic year not set'}
                                 </p>
                                 <p className="mt-1 text-sm text-slate-600">
                                   {details?.school_name || 'School not specified'}
@@ -2331,15 +2294,15 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
                           className="w-full rounded-3xl border border-slate-200 bg-slate-50 p-4 text-left transition-colors hover:border-orange-200 hover:bg-orange-50"
                         >
                           <p className="text-sm font-bold text-slate-900">{schedule.subject}</p>
-                          <p className="mt-1 text-sm text-slate-500">{schedule.day} • {schedule.time}</p>
+                          <p className="mt-1 text-sm text-slate-500">{schedule.day} â€¢ {schedule.time}</p>
                           <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                            {schedule.instructor} • {schedule.room}
+                            {schedule.instructor} â€¢ {schedule.room}
                           </p>
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-500">No schedule currently matches this student’s course and year level.</p>
+                    <p className="text-sm text-slate-500">No schedule currently matches this studentâ€™s course and year level.</p>
                   )}
                 </DetailSectionCard>
 
@@ -2352,7 +2315,7 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
                       </p>
                       <p className="mt-1 text-sm text-slate-500">
                         {selectedStudentCurriculum
-                          ? `${selectedStudentCurriculum.totalUnits} total units • ${selectedStudentCurriculum.year}`
+                          ? `${selectedStudentCurriculum.totalUnits} total units â€¢ ${selectedStudentCurriculum.year}`
                           : 'Add or align curriculum data for this course to show the full program path.'}
                       </p>
                     </div>
@@ -2372,8 +2335,8 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
                             onClick={() => onNavigate?.('instructions', { type: 'syllabus', syllabusId: syllabus.id, course: selectedStudent.course })}
                             className="w-full rounded-2xl bg-white px-3 py-3 text-left transition-colors hover:bg-orange-50"
                           >
-                            <p className="text-sm font-bold text-slate-900">{syllabus.code} • {syllabus.subject}</p>
-                            <p className="mt-1 text-xs text-slate-500">{syllabus.semester} • {syllabus.instructor}</p>
+                            <p className="text-sm font-bold text-slate-900">{syllabus.code} â€¢ {syllabus.subject}</p>
+                            <p className="mt-1 text-xs text-slate-500">{syllabus.semester} â€¢ {syllabus.instructor}</p>
                           </button>
                         ))}
                         {selectedStudentSyllabi.length === 0 ? (
@@ -2386,13 +2349,13 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Lesson plans</p>
                       <p className="mt-2 text-sm font-bold text-slate-900">{selectedStudentLessons.length} lesson(s) connected</p>
                       <p className="mt-1 text-sm text-slate-500">
-                        Lessons are matched from the linked syllabus set for this student’s current course flow.
+                        Lessons are matched from the linked syllabus set for this studentâ€™s current course flow.
                       </p>
                     </div>
                   </div>
                 </DetailSectionCard>
 
-                <DetailSectionCard title="Affiliated Events" subtitle="Events are suggested from the student’s organization affiliations.">
+                <DetailSectionCard title="Affiliated Events" subtitle="Events are suggested from the studentâ€™s organization affiliations.">
                   {selectedStudentEvents.length > 0 ? (
                     <div className="space-y-3">
                       {selectedStudentEvents.map((eventRecord) => (
@@ -2500,3 +2463,8 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
     </div>
   );
 }
+
+
+
+
+
