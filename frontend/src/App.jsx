@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useEffect, useState } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Login } from './components/auth/Login';
 import { Register } from './components/auth/Register';
 import { Sidebar } from './components/layout/Sidebar';
@@ -14,48 +15,57 @@ import { Menu, ShieldCheck } from 'lucide-react';
 import { apiRequest } from './lib/api';
 import { UIProvider, useUI } from './components/ui/UIProvider';
 import { AccountSettingsModal } from './components/account/AccountSettingsModal';
+import { SessionProvider, useSession } from './context/SessionProvider';
+import { RoleRoute } from './components/routing/RoleRoute';
+
+const ROUTES = {
+  dashboard: { path: '/dashboard', title: 'Dashboard' },
+  students: { path: '/users', title: 'Student Profile' },
+  faculty: { path: '/faculty', title: 'Faculty Profile' },
+  scheduling: { path: '/scheduling', title: 'Scheduling' },
+  research: { path: '/research', title: 'College Research' },
+  instructions: { path: '/instructions', title: 'Instructions' },
+  reports: { path: '/reports', title: 'Events', adminOnly: true },
+  audit: { path: '/audit-logs', title: 'Audit Logs', adminOnly: true },
+};
+
+function getTabFromPath(pathname) {
+  if (pathname === ROUTES.students.path || pathname.startsWith(`${ROUTES.students.path}/`)) {
+    return 'students';
+  }
+
+  const matched = Object.entries(ROUTES).find(([, config]) => config.path === pathname);
+  return matched?.[0] || 'dashboard';
+}
+
+function getPathForTab(tab, context = null) {
+  if (tab === 'students' && context?.studentId) {
+    return `${ROUTES.students.path}/${context.studentId}`;
+  }
+
+  return ROUTES[tab]?.path || ROUTES.dashboard.path;
+}
+
+function canAccessRoute(tab, isAdmin) {
+  const route = ROUTES[tab];
+  if (!route) return true;
+  if (route.adminOnly) return isAdmin;
+  return true;
+}
 
 function AppShell() {
-  const pageTitles = {
-    dashboard: 'Dashboard',
-    students: 'Student Profile',
-    faculty: 'Faculty Profile',
-    scheduling: 'Scheduling',
-    research: 'College Research',
-    instructions: 'Instructions',
-    reports: 'Events',
-    audit: 'Audit Logs',
-  };
-
-  // Load user from localStorage on mount
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('activeTab') || 'dashboard';
-  });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, setUser, accessRole, isAdmin } = useSession();
   const [showRegister, setShowRegister] = useState(false);
   const [navigationIntent, setNavigationIntent] = useState(null);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { showError } = useUI();
 
-  // Save user to localStorage whenever it changes
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('user');
-    }
-  }, [user]);
+  const activeTab = getTabFromPath(location.pathname);
+  const pageTitle = ROUTES[activeTab]?.title || 'Dashboard';
 
-  // Save activeTab to localStorage
-  useEffect(() => {
-    localStorage.setItem('activeTab', activeTab);
-  }, [activeTab]);
-
-  // Prevent background scrolling when mobile drawer is open
   useEffect(() => {
     if (!sidebarOpen) return;
     const prevOverflow = document.body.style.overflow;
@@ -65,96 +75,59 @@ function AppShell() {
     };
   }, [sidebarOpen]);
 
-  if (!user) {
-    if (showRegister) {
-      return (
-        <Register 
-          onRegisterSuccess={() => setShowRegister(false)}
-          onSwitchToLogin={() => setShowRegister(false)}
-        />
-      );
-    }
-    return <Login onLogin={(userData) => setUser(userData)} onSwitchToRegister={() => setShowRegister(true)} />;
-  }
-
   const handleNavigate = (tab, context = null) => {
-    setActiveTab(tab);
+    if (!canAccessRoute(tab, isAdmin)) {
+      setNavigationIntent(null);
+      if (location.pathname !== ROUTES.dashboard.path) {
+        navigate(ROUTES.dashboard.path);
+      }
+      return;
+    }
+
     setNavigationIntent({
       tab,
       context,
       timestamp: Date.now(),
     });
+
+    const nextPath = getPathForTab(tab, context);
+    if (location.pathname !== nextPath) {
+      navigate(nextPath);
+    }
   };
 
   const clearNavigationIntent = () => {
     setNavigationIntent(null);
   };
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard onNavigate={handleNavigate} />;
-      case 'students':
-        return (
-          <StudentRecords
-            navigationIntent={navigationIntent}
-            clearNavigationIntent={clearNavigationIntent}
-            onNavigate={handleNavigate}
-          />
-        );
-      case 'faculty':
-        return (
-          <FacultyRecords
-            navigationIntent={navigationIntent}
-            clearNavigationIntent={clearNavigationIntent}
-            onNavigate={handleNavigate}
-          />
-        );
-      case 'scheduling':
-        return (
-          <Scheduling
-            navigationIntent={navigationIntent}
-            clearNavigationIntent={clearNavigationIntent}
-            onNavigate={handleNavigate}
-          />
-        );
-      case 'research':
-        return <CollegeResearch />;
-      case 'instructions':
-        return (
-          <Instructions
-            navigationIntent={navigationIntent}
-            clearNavigationIntent={clearNavigationIntent}
-          />
-        );
-      case 'reports':
-        return (
-          <OrgEventsReports
-            navigationIntent={navigationIntent}
-            clearNavigationIntent={clearNavigationIntent}
-            onNavigate={handleNavigate}
-          />
-        );
-      case 'audit':
-        return <AuditLogs />;
-      default:
-        return (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-2">Module Under Construction</h2>
-              <p>The {activeTab} module is currently being developed.</p>
-            </div>
-          </div>
-        );
+  if (!user) {
+    if (showRegister) {
+      return (
+        <Register
+          onRegisterSuccess={() => setShowRegister(false)}
+          onSwitchToLogin={() => setShowRegister(false)}
+        />
+      );
     }
-  };
+
+    return (
+      <Login
+        onLogin={(userData) => {
+          setUser(userData);
+          if (location.pathname === '/') {
+            navigate(ROUTES.dashboard.path, { replace: true });
+          }
+        }}
+        onSwitchToRegister={() => setShowRegister(true)}
+      />
+    );
+  }
 
   return (
     <div className="flex h-dvh overflow-hidden bg-gray-50 font-sans text-gray-900">
-      <Sidebar 
-        role={user.role || 'FACULTY'} 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={handleNavigate}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onLogout={async () => {
@@ -165,20 +138,18 @@ function AppShell() {
                 username: user?.username,
                 email: user?.email,
                 tenant_id: user?.tenant_id,
-              }
+              },
             });
           } catch (error) {
             showError('Logout sync failed', error.message);
           } finally {
             setUser(null);
-            localStorage.removeItem('user');
-            localStorage.removeItem('activeTab');
+            navigate('/', { replace: true });
           }
         }}
       />
-      
+
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Header */}
         <header className="h-16 sm:h-20 bg-white border-b border-gray-100 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10">
           <div className="flex min-w-0 items-center gap-3">
             <button
@@ -189,11 +160,9 @@ function AppShell() {
             >
               <Menu size={18} />
             </button>
-            <h2 className="truncate text-base sm:text-xl font-bold text-gray-900">
-              {pageTitles[activeTab] || activeTab.replace('-', ' ')}
-            </h2>
+            <h2 className="truncate text-base sm:text-xl font-bold text-gray-900">{pageTitle}</h2>
           </div>
-          
+
           <button
             type="button"
             onClick={() => setShowAccountSettings(true)}
@@ -202,23 +171,92 @@ function AppShell() {
             <ShieldCheck className="text-orange-600" size={18} />
             <div className="hidden text-right leading-tight sm:block">
               <p className="font-semibold text-gray-900">{user.username}</p>
-              <p className="text-xs text-gray-500">{user.role}</p>
+              <p className="text-xs text-gray-500">{accessRole}</p>
             </div>
           </button>
         </header>
 
-        {/* Content Area */}
         <div className="min-w-0 flex-1 overflow-auto p-4 sm:p-8">
-          {renderContent()}
+          <Routes>
+            <Route path="/" element={<Navigate to={ROUTES.dashboard.path} replace />} />
+            <Route path={ROUTES.dashboard.path} element={<Dashboard onNavigate={handleNavigate} />} />
+            <Route
+              path={ROUTES.students.path}
+              element={
+                <StudentRecords
+                  navigationIntent={navigationIntent}
+                  clearNavigationIntent={clearNavigationIntent}
+                  onNavigate={handleNavigate}
+                />
+              }
+            />
+            <Route
+              path={`${ROUTES.students.path}/:id`}
+              element={
+                <StudentRecords
+                  navigationIntent={navigationIntent}
+                  clearNavigationIntent={clearNavigationIntent}
+                  onNavigate={handleNavigate}
+                />
+              }
+            />
+            <Route
+              path={ROUTES.faculty.path}
+              element={
+                <FacultyRecords
+                  navigationIntent={navigationIntent}
+                  clearNavigationIntent={clearNavigationIntent}
+                  onNavigate={handleNavigate}
+                />
+              }
+            />
+            <Route
+              path={ROUTES.scheduling.path}
+              element={
+                <Scheduling
+                  navigationIntent={navigationIntent}
+                  clearNavigationIntent={clearNavigationIntent}
+                  onNavigate={handleNavigate}
+                />
+              }
+            />
+            <Route path={ROUTES.research.path} element={<CollegeResearch />} />
+            <Route
+              path={ROUTES.instructions.path}
+              element={
+                <Instructions
+                  navigationIntent={navigationIntent}
+                  clearNavigationIntent={clearNavigationIntent}
+                />
+              }
+            />
+            <Route
+              path={ROUTES.reports.path}
+              element={
+                <RoleRoute allow="admin">
+                  <OrgEventsReports
+                    navigationIntent={navigationIntent}
+                    clearNavigationIntent={clearNavigationIntent}
+                    onNavigate={handleNavigate}
+                  />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path={ROUTES.audit.path}
+              element={
+                <RoleRoute allow="admin">
+                  <AuditLogs />
+                </RoleRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to={ROUTES.dashboard.path} replace />} />
+          </Routes>
         </div>
       </main>
 
       {showAccountSettings ? (
-        <AccountSettingsModal
-          user={user}
-          onClose={() => setShowAccountSettings(false)}
-          onUserUpdated={(nextUser) => setUser(nextUser)}
-        />
+        <AccountSettingsModal onClose={() => setShowAccountSettings(false)} />
       ) : null}
     </div>
   );
@@ -227,7 +265,9 @@ function AppShell() {
 export default function App() {
   return (
     <UIProvider>
-      <AppShell />
+      <SessionProvider>
+        <AppShell />
+      </SessionProvider>
     </UIProvider>
   );
 }
