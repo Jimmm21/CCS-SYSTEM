@@ -24,6 +24,7 @@ export function StudentListRow({ student, onView, onEdit }) {
         {student.year_level}
         {student.section ? <span className="ml-1 text-xs text-slate-400">({student.section})</span> : null}
       </td>
+      <td className="px-6 py-4 text-sm text-slate-600">{student.year_level}</td>
       <td className="px-6 py-4">
         <div className="flex flex-wrap gap-2">
           {(student.skills || []).slice(0, 2).map((skill) => (

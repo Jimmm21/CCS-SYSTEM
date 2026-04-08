@@ -1421,6 +1421,7 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
         ? `Account ID: ${response.account.email} | Default password: ${response.account.password}`
         : 'The new student is now part of the searchable list.';
       showSuccess('Student profile added', credentialsHint);
+      showSuccess('Student profile added', 'The new student is now part of the searchable list.');
     } catch (error) {
       showError('Unable to add student', error.message);
     }
@@ -2320,6 +2321,7 @@ export function StudentRecords({ navigationIntent, clearNavigationIntent, onNavi
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {scopedStudents.map((student) => (
+                {students.map((student) => (
                   <StudentListRow
                     key={student.id}
                     student={student}
