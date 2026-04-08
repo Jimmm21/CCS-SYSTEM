@@ -2,9 +2,15 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useSession } from '../../context/SessionProvider';
 
-export function RoleRoute({ allow = [], redirectTo = '/dashboard', children }) {
+export function RoleRoute({ allow = [], redirectTo, children }) {
   const location = useLocation();
   const { accessRole, isAdmin } = useSession();
+  const resolvedRedirect = redirectTo
+    || (accessRole === 'STUDENT'
+      ? '/student-portal'
+      : accessRole === 'FACULTY'
+        ? '/users'
+        : '/dashboard');
 
   const hasAccess = allow === 'admin'
     ? isAdmin
@@ -16,5 +22,5 @@ export function RoleRoute({ allow = [], redirectTo = '/dashboard', children }) {
     return children;
   }
 
-  return <Navigate to={redirectTo} replace state={{ deniedFrom: location.pathname }} />;
+  return <Navigate to={resolvedRedirect} replace state={{ deniedFrom: location.pathname }} />;
 }

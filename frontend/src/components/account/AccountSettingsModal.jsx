@@ -121,12 +121,13 @@ export function AccountSettingsModal({ onClose }) {
               Email
             </span>
             <input
-              type="email"
+              type="text"
               required
               autoComplete="off"
               className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none"
               value={formData.email}
               onChange={(event) => handleChange('email', event.target.value)}
+              placeholder="Email or account ID"
             />
           </label>
         </div>

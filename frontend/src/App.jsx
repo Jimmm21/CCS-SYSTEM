@@ -5,6 +5,9 @@ import { Register } from './components/auth/Register';
 import { Sidebar } from './components/layout/Sidebar';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { StudentRecords } from './components/students/StudentRecords';
+import { StudentPortal } from './components/students/StudentPortal';
+import { StudentSectionSchedule } from './components/students/StudentSectionSchedule';
+import { StudentSectionEvents } from './components/students/StudentSectionEvents';
 import { FacultyRecords } from './components/faculty/FacultyRecords';
 import { Scheduling } from './components/scheduling/Scheduling';
 import { CollegeResearch } from './components/research/CollegeResearch';
@@ -19,14 +22,17 @@ import { SessionProvider, useSession } from './context/SessionProvider';
 import { RoleRoute } from './components/routing/RoleRoute';
 
 const ROUTES = {
-  dashboard: { path: '/dashboard', title: 'Dashboard' },
-  students: { path: '/users', title: 'Student Profile' },
-  faculty: { path: '/faculty', title: 'Faculty Profile' },
-  scheduling: { path: '/scheduling', title: 'Scheduling' },
-  research: { path: '/research', title: 'College Research' },
-  instructions: { path: '/instructions', title: 'Instructions' },
-  reports: { path: '/reports', title: 'Events', adminOnly: true },
-  audit: { path: '/audit-logs', title: 'Audit Logs', adminOnly: true },
+  student_portal: { path: '/student-portal', title: 'Student Portal', roles: ['STUDENT'] },
+  student_schedule: { path: '/student-section-schedule', title: 'Section Schedule', roles: ['STUDENT'] },
+  student_events: { path: '/student-section-events', title: 'Events', roles: ['STUDENT'] },
+  dashboard: { path: '/dashboard', title: 'Dashboard', roles: ['DEAN', 'CHAIR', 'SECRETARY'] },
+  students: { path: '/users', title: 'Student Profile', roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
+  faculty: { path: '/faculty', title: 'Faculty Profile', roles: ['DEAN', 'CHAIR', 'SECRETARY'] },
+  scheduling: { path: '/scheduling', title: 'Scheduling', roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
+  research: { path: '/research', title: 'College Research', roles: ['DEAN', 'CHAIR', 'FACULTY', 'STUDENT'] },
+  instructions: { path: '/instructions', title: 'Instructions', roles: ['DEAN', 'CHAIR', 'SECRETARY'] },
+  reports: { path: '/reports', title: 'Events', roles: ['DEAN', 'CHAIR', 'FACULTY'] },
+  audit: { path: '/audit-logs', title: 'Audit Logs', roles: ['DEAN'] },
 };
 
 function getTabFromPath(pathname) {
@@ -46,17 +52,22 @@ function getPathForTab(tab, context = null) {
   return ROUTES[tab]?.path || ROUTES.dashboard.path;
 }
 
-function canAccessRoute(tab, isAdmin) {
+function getDefaultPathForRole(role) {
+  if (role === 'STUDENT') return ROUTES.student_portal.path;
+  if (role === 'FACULTY') return ROUTES.students.path;
+  return ROUTES.dashboard.path;
+}
+
+function canAccessRoute(tab, role) {
   const route = ROUTES[tab];
-  if (!route) return true;
-  if (route.adminOnly) return isAdmin;
-  return true;
+  if (!route || !route.roles || route.roles.length === 0) return true;
+  return route.roles.includes(role || 'FACULTY');
 }
 
 function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, setUser, accessRole, isAdmin } = useSession();
+  const { user, setUser, accessRole } = useSession();
   const [showRegister, setShowRegister] = useState(false);
   const [navigationIntent, setNavigationIntent] = useState(null);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
@@ -75,11 +86,23 @@ function AppShell() {
     };
   }, [sidebarOpen]);
 
+  useEffect(() => {
+    if (!user) return;
+    const currentTab = getTabFromPath(location.pathname);
+    if (!canAccessRoute(currentTab, accessRole)) {
+      const fallbackPath = getDefaultPathForRole(accessRole);
+      if (location.pathname !== fallbackPath) {
+        navigate(fallbackPath, { replace: true });
+      }
+    }
+  }, [accessRole, location.pathname, navigate, user]);
+
   const handleNavigate = (tab, context = null) => {
-    if (!canAccessRoute(tab, isAdmin)) {
+    if (!canAccessRoute(tab, accessRole)) {
       setNavigationIntent(null);
-      if (location.pathname !== ROUTES.dashboard.path) {
-        navigate(ROUTES.dashboard.path);
+      const fallbackPath = getDefaultPathForRole(accessRole);
+      if (location.pathname !== fallbackPath) {
+        navigate(fallbackPath);
       }
       return;
     }
@@ -115,7 +138,7 @@ function AppShell() {
         onLogin={(userData) => {
           setUser(userData);
           if (location.pathname === '/') {
-            navigate(ROUTES.dashboard.path, { replace: true });
+            navigate(getDefaultPathForRole(userData?.role), { replace: true });
           }
         }}
         onSwitchToRegister={() => setShowRegister(true)}
@@ -178,7 +201,31 @@ function AppShell() {
 
         <div className="min-w-0 flex-1 overflow-auto p-4 sm:p-8">
           <Routes>
-            <Route path="/" element={<Navigate to={ROUTES.dashboard.path} replace />} />
+            <Route path="/" element={<Navigate to={getDefaultPathForRole(accessRole)} replace />} />
+            <Route
+              path={ROUTES.student_portal.path}
+              element={(
+                <RoleRoute allow={['STUDENT']}>
+                  <StudentPortal />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path={ROUTES.student_schedule.path}
+              element={(
+                <RoleRoute allow={['STUDENT']}>
+                  <StudentSectionSchedule />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path={ROUTES.student_events.path}
+              element={(
+                <RoleRoute allow={['STUDENT']}>
+                  <StudentSectionEvents />
+                </RoleRoute>
+              )}
+            />
             <Route path={ROUTES.dashboard.path} element={<Dashboard onNavigate={handleNavigate} />} />
             <Route
               path={ROUTES.students.path}
@@ -233,7 +280,7 @@ function AppShell() {
             <Route
               path={ROUTES.reports.path}
               element={
-                <RoleRoute allow="admin">
+                <RoleRoute allow={['DEAN', 'CHAIR', 'FACULTY']}>
                   <OrgEventsReports
                     navigationIntent={navigationIntent}
                     clearNavigationIntent={clearNavigationIntent}
@@ -245,12 +292,12 @@ function AppShell() {
             <Route
               path={ROUTES.audit.path}
               element={
-                <RoleRoute allow="admin">
+                <RoleRoute allow={['DEAN']}>
                   <AuditLogs />
                 </RoleRoute>
               }
             />
-            <Route path="*" element={<Navigate to={ROUTES.dashboard.path} replace />} />
+            <Route path="*" element={<Navigate to={getDefaultPathForRole(accessRole)} replace />} />
           </Routes>
         </div>
       </main>

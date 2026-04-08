@@ -11,6 +11,7 @@ import {
   Clock,
   BookOpen,
   FileText,
+  UserRound,
   X
 } from 'lucide-react';
 import { cn } from '../../constants';
@@ -24,19 +25,23 @@ export const Sidebar = ({ activeTab, setActiveTab, onLogout, open = true, onClos
     CHAIR: 'Department Chair',
     FACULTY: 'Faculty',
     SECRETARY: 'Secretary',
+    STUDENT: 'Student',
   };
 
   const displayRole = roleDisplayMap[accessRole] || accessRole || 'Faculty';
   const displayName = user?.username || 'Presentation User';
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
+    { id: 'student_portal', label: 'Student Portal', icon: UserRound, roles: ['STUDENT'] },
+    { id: 'student_schedule', label: 'Section Schedule', icon: Clock, roles: ['STUDENT'] },
+    { id: 'student_events', label: 'Events', icon: Calendar, roles: ['STUDENT'] },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['DEAN', 'CHAIR', 'SECRETARY'] },
     { id: 'students', label: 'Student Profile', icon: IdCard, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
     { id: 'faculty', label: 'Faculty Profile', icon: GraduationCap, roles: ['DEAN', 'CHAIR', 'SECRETARY'] },
     { id: 'scheduling', label: 'Scheduling', icon: Clock, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
-    { id: 'research', label: 'College Research', icon: BookOpen, roles: ['DEAN', 'CHAIR', 'FACULTY'] },
-    { id: 'instructions', label: 'Instructions', icon: FileText, roles: ['DEAN', 'CHAIR', 'FACULTY', 'SECRETARY'] },
-    { id: 'reports', label: 'Events', icon: Calendar, roles: ['DEAN'] },
+    { id: 'research', label: 'College Research', icon: BookOpen, roles: ['DEAN', 'CHAIR', 'FACULTY', 'STUDENT'] },
+    { id: 'instructions', label: 'Instructions', icon: FileText, roles: ['DEAN', 'CHAIR', 'SECRETARY'] },
+    { id: 'reports', label: 'Events', icon: Calendar, roles: ['DEAN', 'CHAIR', 'FACULTY'] },
     { id: 'audit', label: 'Audit Logs', icon: MessageSquare, roles: ['DEAN'], hasSubmenu: true },
   ];
 
